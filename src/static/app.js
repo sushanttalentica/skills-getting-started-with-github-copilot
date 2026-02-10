@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
           <div class="participants-section">
             <strong>Participants (${details.participants.length}):</strong>
-            ${details.participants.length > 0 ? `<ul>${details.participants.map(p => `<li>${p}</li>`).join('')}</ul>` : '<p class="no-participants">No participants yet</p>'}
+            ${details.participants.length > 0 ? `<ul>${details.participants.map(p => `<li><span class="participant-email">${p}</span><button class="delete-btn" data-email="${p}" data-activity="${name}" type="button">✕</button></li>`).join('')}</ul>` : '<p class="no-participants">No participants yet</p>'}
           </div>
         `;
 
@@ -66,6 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
@@ -85,6 +86,42 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // Handle participant deletion
+  function setupDeleteHandlers() {
+    document.querySelectorAll(".delete-btn").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const email = btn.getAttribute("data-email");
+        const activity = btn.getAttribute("data-activity");
+
+        try {
+          const response = await fetch(
+            `/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`,
+            {
+              method: "DELETE",
+            }
+          );
+
+          if (response.ok) {
+            fetchActivities();
+          } else {
+            const result = await response.json();
+            alert(result.detail || "Failed to unregister participant");
+          }
+        } catch (error) {
+          alert("Error removing participant");
+          console.error("Error:", error);
+        }
+      });
+    });
+  }
+
   // Initialize app
   fetchActivities();
+  
+  // Setup delete handlers after activities are loaded
+  const observer = new MutationObserver(() => {
+    setupDeleteHandlers();
+  });
+  observer.observe(activitiesList, { childList: true });
 });
